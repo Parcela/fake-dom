@@ -1,0 +1,42 @@
+{
+	"name": "Parcela-fake-dom",
+	"version": "0.1.0",
+	"description": "Parcela's DOM emulator",
+	"author": {
+		"name": "Daniel Barreiro",
+		"email": "devasatyam@gmail.com"
+	},
+	"licenses": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Parcela/fake-dom"
+	},
+	"bugs": {
+		"url": "https://github.com/Parcela/fake-dom/issues"
+	},
+	"keywords": [
+		"Parcela",
+		"parcel",
+		"DOM emulator"
+	],
+	"main": "fake-dom.js",
+
+	"engines": {
+		"node": "*"
+	},
+	"scripts": {
+		"lint": "jshint ./fake-dom.js"
+	},
+	"homepage": "http://Parcela.github.io",
+	"maintainers": [
+		{
+			"name": "Daniel Barreiro",
+			"email": "devasatyam@gmail.com"
+    	},
+		{
+			"name": "Marco Asbreuk",
+			"email": "marco@itsasbreuk.nl"
+    	}
+  	]
+
+}
