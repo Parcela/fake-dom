@@ -65,7 +65,11 @@ window.document.createElement = function(tag) {
 			return this[name]
 		},
 		addEventListener: window.document.addEventListener,
-		removeEventListener: window.document.removeEventListener
+		removeEventListener: window.document.removeEventListener,
+		dispatchEvent: window.document.dispatchEvent,
+		matchesSelector: window.document.matchesSelector,
+		getElementById: window.document.getElementById,
+		contains: window.document.contains
 	}
 }
 window.document.createElementNS = function(namespace, tag) {
@@ -100,12 +104,126 @@ window.document.removeChild = function(child) {
 	this.childNodes.splice(index, 1)
 	child.parentNode = null
 }
-window.document.addEventListener = function () {
+window.document.addEventListener = function (type, cb, capture) {
 	count('addEventListener');
+	if (!this.$on) this.$on = {};
+	this.$on[type] = {
+		cb: cb,
+		capture: capture
+	};
 };
-window.document.removeEventListener = function () {
+window.document.removeEventListener = function (type) {
 	count('removeEventListener');
+	if (this.$on && this.$on[type]) {
+		delete this.$on[type];
+	}
 };
+var EventTypes = {
+	MouseEvents: function () {
+		this.initMouseEvent = function (type, bubbles, cancelable, view, detail,
+				screenX, screenY, clientX, clientY,
+				ctrlKey, altKey, shiftKey, metaKey,
+				button, relatedTarget) {
+			this.ev = {
+				type:type, 
+				bubbles:bubbles,
+				cancelable:cancelable,
+				view:view,
+				detail:detail,
+				screenX:screenX,
+				screenY:screenY,
+				clientX:clientX,
+				clientY:clientY,
+				ctrlKey:ctrlKey,
+				altKey:altKey,
+				shiftKey:shiftKey,
+				metaKey:metaKey,
+				button:button,
+				relatedTarget:relatedTarget
+			};
+		};
+	}
+};
+window.document.createEvent = function (type) {
+	return new EventTypes[type]();
+};
+window.document.dispatchEvent = function (event) {
+	var branch = [],
+		el = this,
+		type = event.ev.type,
+		cb,
+		ev = event.ev;
+	ev.target = this;
+	
+	while(el) {
+		if (el.$on && el.$on[type] && el.$on[type].capture) {
+			branch.push(el.$on[type].cb);
+		}
+		el = el.parentNode;
+	}
+	while ((cb =  branch.pop())) {
+		cb.call(this, event.ev);
+	}
+	el = this;
+	while (el) {
+		if (el.$on && el.$on[type] && el.$on[type].capture === false) {
+			el.$on[type].cb.call(this, event.ev);
+		}
+		if (el['on' + type]) {
+			el['on' + type].call(this, event.ev);
+		}
+		el = el.parentNode;
+	}
+};
+
+var vNodeParser = /(?:(^|#|\.)([^#\.\[\]]+))|(\[.+?\])/g;			
+
+window.document.matchesSelector = function (sel) {
+	
+	var match, 
+		found = false,
+		classes = this.className && this.className.split(' ');
+	/*jshint boss:true*/
+	while (match = vNodeParser.exec(sel)) {
+		/*jshint boss:false*/
+		switch (match[1]) {
+			case "":
+				if (this.nodeName !== match[2].toUpperCase()) return false;
+				found = true;
+				break;
+			case "#":
+				if (this.id !== match[2]) return false;
+				found = true;
+				break;
+			case ".":
+				
+				if (!classes || classes.indexOf(match[2]) === -1) return false;
+				found = true;
+				break;
+		}
+	}
+	return found;
+};
+
+window.document.getElementById = function (id) {
+	var found = null,
+		find = function (el) {
+			if (el.id === id) {
+				found = el;
+				return true;
+			}
+			if (el.childNodes) {
+				return el.childNodes.some(find);
+			}
+		};
+	find(window.document);
+	return found;
+};
+window.document.contains = function (node) {
+	while (node && node !== this) node = node.parentNode;
+	return node === this;
+};
+
 window.performance = new function () {
 	var timestamp = 50
 	this.$elapse = function(amount) {timestamp += amount}
