@@ -1,4 +1,3 @@
-/* jshint node: true, lastsemic: true, -W033*/
 "use strict";
 var fs = require('fs'),
 	Url = require('url');
@@ -12,27 +11,31 @@ var count = function (method) {
 		used[method] += 1;
 	}
 };
+var vNodeParser = /(?:(^|#|\.)([^#\.\[\]]+))|(\[.+?\])/g;			
 
-var window = {}
-window.document = {}
-window.document.childNodes = []
-window.document.createElement = function(tag) {
+
+var window = {},
+	doc = window.document = {};
+
+doc.childNodes = [];
+doc.createElement = function(tag) {
 	count('createElement');
 	return {
 		style: {},
 		childNodes: [],
 		nodeName: tag.toUpperCase(),
-		appendChild: window.document.appendChild,
-		removeChild: window.document.removeChild,
-		replaceChild: window.document.replaceChild,
+		appendChild: doc.appendChild,
+		removeChild: doc.removeChild,
+		replaceChild: doc.replaceChild,
 		insertBefore: function(node, reference) {
 			count('insertBefore');
-			node.parentNode = this
-			var referenceIndex = this.childNodes.indexOf(reference)
-			if (referenceIndex < 0) this.childNodes.push(node)
-			else {
-				var index = this.childNodes.indexOf(node)
-				this.childNodes.splice(referenceIndex, index < 0 ? 0 : 1, node)
+			node.parentNode = this;
+			var referenceIndex = this.childNodes.indexOf(reference);
+			if (referenceIndex < 0) {
+				this.childNodes.push(node);
+			} else {
+				var index = this.childNodes.indexOf(node);
+				this.childNodes.splice(referenceIndex, index < 0 ? 0 : 1, node);
 			}
 		},
 		insertAdjacentHTML: function(position, html) {
@@ -40,15 +43,14 @@ window.document.createElement = function(tag) {
 
 			//todo: accept markup
 			if (position == "beforebegin") {
-				this.parentNode.insertBefore(window.document.createTextNode(html), this)
-			}
-			else if (position == "beforeend") {
-				this.appendChild(window.document.createTextNode(html))
+				this.parentNode.insertBefore(doc.createTextNode(html), this);
+			} else if (position == "beforeend") {
+				this.appendChild(doc.createTextNode(html));
 			}
 		},
 		setAttribute: function(name, value) {
 			count('setAttribute');
-			this[name] = value.toString()
+			this[name] = value.toString();
 			if (name == 'href') {
 				var url = Url.parse(value);
 				this.pathname = url.pathname;
@@ -57,54 +59,80 @@ window.document.createElement = function(tag) {
 		},
 		setAttributeNS: function(namespace, name, value) {
 			count('setAttributeNS');
-			this.namespaceURI = namespace
-			this[name] = value.toString()
+			this.namespaceURI = namespace;
+			this[name] = value.toString();
 		},
 		getAttribute: function(name, value) {
 			count('getAttribute');
-			return this[name]
+			return this[name];
 		},
-		addEventListener: window.document.addEventListener,
-		removeEventListener: window.document.removeEventListener,
-		dispatchEvent: window.document.dispatchEvent,
-		matchesSelector: window.document.matchesSelector,
-		getElementById: window.document.getElementById,
-		contains: window.document.contains
-	}
-}
-window.document.createElementNS = function(namespace, tag) {
-			count('createElementNS');
-	var element = window.document.createElement(tag)
-	element.namespaceURI = namespace
-	return element
-}
-window.document.createTextNode = function(text) {
+		addEventListener: doc.addEventListener,
+		removeEventListener: doc.removeEventListener,
+		dispatchEvent: doc.dispatchEvent,
+		matchesSelector: function (sel) {
+			count('matchesSelector');
+
+			var match, 
+				found = false,
+				classes = this.className && this.className.split(' ');
+			/*jshint boss:true*/
+			while (match = vNodeParser.exec(sel)) {
+				/*jshint boss:false*/
+				switch (match[1]) {
+					case "":
+						if (this.nodeName !== match[2].toUpperCase()) return false;
+						found = true;
+						break;
+					case "#":
+						if (this.id !== match[2]) return false;
+						found = true;
+						break;
+					case ".":
+
+						if (!classes || classes.indexOf(match[2]) === -1) return false;
+						found = true;
+						break;
+				}
+			}
+			return found;
+		},
+		getElementById: doc.getElementById,
+		contains: doc.contains
+	};
+};
+doc.createElementNS = function(namespace, tag) {
+	count('createElementNS');
+	var element = doc.createElement(tag);
+	element.namespaceURI = namespace;
+	return element;
+};
+doc.createTextNode = function(text) {
 	count('createTextNode');
-	return {nodeValue: text.toString()}
-}
-window.document.documentElement = window.document.createElement("html")
-window.document.replaceChild = function(newChild, oldChild) {
+	return {nodeValue: text.toString()};
+};
+doc.documentElement = doc.createElement("html");
+doc.replaceChild = function(newChild, oldChild) {
 	count('replaceChild');
-	var index = this.childNodes.indexOf(oldChild)
-	if (index > -1) this.childNodes.splice(index, 1, newChild)
-	else this.childNodes.push(newChild)
-	newChild.parentNode = this
-	oldChild.parentNode = null
-}
-window.document.appendChild = function(child) {
+	var index = this.childNodes.indexOf(oldChild);
+	if (index > -1) this.childNodes.splice(index, 1, newChild);
+	else this.childNodes.push(newChild);
+	newChild.parentNode = this;
+	oldChild.parentNode = null;
+};
+doc.appendChild = function(child) {
 	count('appendChild');
-	var index = this.childNodes.indexOf(child)
-	if (index > -1) this.childNodes.splice(index, 1)
-	this.childNodes.push(child)
-	child.parentNode = this
-}
-window.document.removeChild = function(child) {
+	var index = this.childNodes.indexOf(child);
+	if (index > -1) this.childNodes.splice(index, 1);
+	this.childNodes.push(child);
+	child.parentNode = this;
+};
+doc.removeChild = function(child) {
 	count('removeChild');
-	var index = this.childNodes.indexOf(child)
-	this.childNodes.splice(index, 1)
-	child.parentNode = null
-}
-window.document.addEventListener = function (type, cb, capture) {
+	var index = this.childNodes.indexOf(child);
+	this.childNodes.splice(index, 1);
+	child.parentNode = null;
+};
+doc.addEventListener = function (type, cb, capture) {
 	count('addEventListener');
 	if (!this.$on) this.$on = {};
 	this.$on[type] = {
@@ -112,7 +140,7 @@ window.document.addEventListener = function (type, cb, capture) {
 		capture: capture
 	};
 };
-window.document.removeEventListener = function (type) {
+doc.removeEventListener = function (type) {
 	count('removeEventListener');
 	if (this.$on && this.$on[type]) {
 		delete this.$on[type];
@@ -124,6 +152,7 @@ var EventTypes = {
 				screenX, screenY, clientX, clientY,
 				ctrlKey, altKey, shiftKey, metaKey,
 				button, relatedTarget) {
+			count('initMouseEvent');
 			this.ev = {
 				type:type, 
 				bubbles:bubbles,
@@ -144,10 +173,12 @@ var EventTypes = {
 		};
 	}
 };
-window.document.createEvent = function (type) {
+doc.createEvent = function (type) {
+	count('createEvent');
 	return new EventTypes[type]();
 };
-window.document.dispatchEvent = function (event) {
+doc.dispatchEvent = function (event) {
+	count('dispatchEvent');
 	var branch = [],
 		el = this,
 		type = event.ev.type,
@@ -176,36 +207,9 @@ window.document.dispatchEvent = function (event) {
 	}
 };
 
-var vNodeParser = /(?:(^|#|\.)([^#\.\[\]]+))|(\[.+?\])/g;			
 
-window.document.matchesSelector = function (sel) {
-	
-	var match, 
-		found = false,
-		classes = this.className && this.className.split(' ');
-	/*jshint boss:true*/
-	while (match = vNodeParser.exec(sel)) {
-		/*jshint boss:false*/
-		switch (match[1]) {
-			case "":
-				if (this.nodeName !== match[2].toUpperCase()) return false;
-				found = true;
-				break;
-			case "#":
-				if (this.id !== match[2]) return false;
-				found = true;
-				break;
-			case ".":
-				
-				if (!classes || classes.indexOf(match[2]) === -1) return false;
-				found = true;
-				break;
-		}
-	}
-	return found;
-};
-
-window.document.getElementById = function (id) {
+doc.getElementById = function (id) {
+	count('getElementById');
 	var found = null,
 		find = function (el) {
 			if (el.id === id) {
@@ -216,51 +220,58 @@ window.document.getElementById = function (id) {
 				return el.childNodes.some(find);
 			}
 		};
-	find(window.document);
+	find(doc);
 	return found;
 };
-window.document.contains = function (node) {
+doc.contains = function (node) {
+	count('contains');
 	while (node && node !== this) node = node.parentNode;
 	return node === this;
 };
 
 window.performance = new function () {
-	var timestamp = 50
-	this.$elapse = function(amount) {timestamp += amount}
-	this.now = function() {return timestamp}
-}
-window.cancelAnimationFrame = function() {}
-window.requestAnimationFrame = function(callback) {window.requestAnimationFrame.$callback = callback}
+	var timestamp = 50;
+	this.$elapse = function(amount) {
+		timestamp += amount;
+	};
+	this.now = function() {
+		return timestamp;
+	};
+};
+window.cancelAnimationFrame = function() {};
+window.requestAnimationFrame = function(callback) {
+	window.requestAnimationFrame.$callback = callback;
+};
 window.requestAnimationFrame.$resolve = function() {
-	if (window.requestAnimationFrame.$callback) window.requestAnimationFrame.$callback()
-	window.requestAnimationFrame.$callback = null
-	window.performance.$elapse(20)
-}
+	if (window.requestAnimationFrame.$callback) window.requestAnimationFrame.$callback();
+	window.requestAnimationFrame.$callback = null;
+	window.performance.$elapse(20);
+};
 window.location = {};
 window.XMLHttpRequest = new function() {
 	var request = function() {
 		this.open = function(method, url) {
-			this.method = method
-			this.url = url
-		}
+			this.method = method;
+			this.url = url;
+		};
 		this.send = function() {
 			var xhr = this;
 			var r = '';
-			xhr.readyState = 4
-			xhr.status = 200
+			xhr.readyState = 4;
+			xhr.status = 200;
 
-			request.$instances.push(this)
+			request.$instances.push(this);
 			fs.createReadStream(this.url, {encoding:'utf8'}).on('data', function (chunk) {
 				r += chunk;
 			}).on('end', function () {
 				xhr.responseText = r;
 				xhr.onreadystatechange();
 			});
-		}
-	}
-	request.$instances = []
-	return request
-}
+		};
+	};
+	request.$instances = [];
+	return request;
+};
 
 var getHTML = function (node) {
 	var prop, val,
@@ -332,14 +343,14 @@ var reset = function () {
 	window.location.hash = "";
 	window.history = {};
 	window.history.pushState = function(data, title, url) {
-		window.location.pathname = window.location.search = window.location.hash = url
+		window.location.pathname = window.location.search = window.location.hash = url;
 	},
 	window.history.replaceState = function(data, title, url) {
-		window.location.pathname = window.location.search = window.location.hash = url
-	}
-	var _body = window.document.createElement('body');
-	window.document.appendChild(_body);
-	window.document.body = _body;
+		window.location.pathname = window.location.search = window.location.hash = url;
+	};
+	var _body = doc.createElement('body');
+	doc.appendChild(_body);
+	doc.body = _body;
 };
 reset();
 
@@ -356,7 +367,7 @@ window.navigator = {
 	},
 	reset: reset,
 	getHTML: function () {
-		return getHTML(window.document.body);
+		return getHTML(doc.body);
 	},
 	navigate: function (url) {
 		var u = Url.parse(url, false, true);
