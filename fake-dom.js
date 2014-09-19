@@ -188,20 +188,24 @@ doc.dispatchEvent = function (event) {
 	
 	while(el) {
 		if (el.$on && el.$on[type] && el.$on[type].capture) {
+			branch.push(el);
 			branch.push(el.$on[type].cb);
 		}
 		el = el.parentNode;
 	}
 	while ((cb =  branch.pop())) {
-		cb.call(this, event.ev);
+		ev.currentTarget = branch.pop();
+		cb.call(this, ev);
 	}
 	el = this;
 	while (el) {
 		if (el.$on && el.$on[type] && el.$on[type].capture === false) {
-			el.$on[type].cb.call(this, event.ev);
+			ev.currentTarget = el;
+			el.$on[type].cb.call(this, ev);
 		}
 		if (el['on' + type]) {
-			el['on' + type].call(this, event.ev);
+			ev.currentTarget = el;
+			el['on' + type].call(this, ev);
 		}
 		el = el.parentNode;
 	}
