@@ -11,7 +11,7 @@ var count = function (method) {
 		used[method] += 1;
 	}
 };
-var vNodeParser = /(?:(^|#|\.)([^#\.\[\]]+))|(\[.+?\])/g;			
+var vNodeParser = /(?:(^|#|\.)([^#\.\[\]]+))|(\[.+?\])/g;
 
 
 var window = {},
@@ -71,8 +71,9 @@ doc.createElement = function(tag) {
 		dispatchEvent: doc.dispatchEvent,
 		matchesSelector: function (sel) {
 			count('matchesSelector');
-
-			var match, 
+			// don't forget to reset the found position of the previous search:
+			vNodeParser.lastIndex = 0;
+			var match,
 				found = false,
 				classes = this.className && this.className.split(' ');
 			/*jshint boss:true*/
@@ -154,7 +155,7 @@ var EventTypes = {
 				button, relatedTarget) {
 			count('initMouseEvent');
 			this.ev = {
-				type:type, 
+				type:type,
 				bubbles:bubbles,
 				cancelable:cancelable,
 				view:view,
@@ -185,7 +186,7 @@ doc.dispatchEvent = function (event) {
 		cb,
 		ev = event.ev;
 	ev.target = this;
-	
+
 	while(el) {
 		if (el.$on && el.$on[type] && el.$on[type].capture) {
 			branch.push(el);
