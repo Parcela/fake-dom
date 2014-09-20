@@ -69,33 +69,53 @@ doc.createElement = function(tag) {
 		addEventListener: doc.addEventListener,
 		removeEventListener: doc.removeEventListener,
 		dispatchEvent: doc.dispatchEvent,
-		matchesSelector: function (sel) {
-			count('matchesSelector');
-			// don't forget to reset the found position of the previous search:
-			vNodeParser.lastIndex = 0;
-			var match,
-				found = false,
-				classes = this.className && this.className.split(' ');
-			/*jshint boss:true*/
-			while (match = vNodeParser.exec(sel)) {
-				/*jshint boss:false*/
-				switch (match[1]) {
-					case "":
-						if (this.nodeName !== match[2].toUpperCase()) return false;
-						found = true;
-						break;
-					case "#":
-						if (this.id !== match[2]) return false;
-						found = true;
-						break;
-					case ".":
+		// matchesSelector should match nested selectors like: "#someid .somedivclass button.someclass"
+		matchesSelector: function (selector) {
+			var selList = selector.replace(/( )+/g, ' ').split(' '),
+			    size = selList.length,
+			    matches, i, selectorItem, node, selMatch;
+			matches = function (checkNode, sel) {
+				count('matchesSelector');
+				// don't forget to reset the found position of the previous search:
+				vNodeParser.lastIndex = 0;
+				var match,
+					found = false,
+					classes = checkNode.className && checkNode.className.split(' ');
+				/*jshint boss:true*/
+				while (match = vNodeParser.exec(sel)) {
+					/*jshint boss:false*/
+					switch (match[1]) {
+						case "":
+							if (checkNode.nodeName !== match[2].toUpperCase()) return false;
+							found = true;
+							break;
+						case "#":
+							if (checkNode.id !== match[2]) return false;
+							found = true;
+							break;
+						case ".":
 
-						if (!classes || classes.indexOf(match[2]) === -1) return false;
-						found = true;
-						break;
+							if (!classes || classes.indexOf(match[2]) === -1) return false;
+							found = true;
+							break;
+					}
 				}
+				return found;
+			};
+			if (size===0) {
+				return false;
 			}
-			return found;
+			node = this;
+			selectorItem = selList[size-1];
+            selMatch = matches(node, selectorItem);
+			for (i=size-2; (selMatch && (i>=0)); i--) {
+				selectorItem = selList[i];
+	            node = node.parentNode;
+	            while (node && !(selMatch=matches(node, selectorItem))) {
+	            	node = node.parentNode;
+	            }
+			}
+			return selMatch;
 		},
 		getElementById: doc.getElementById,
 		contains: doc.contains
