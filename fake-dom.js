@@ -50,7 +50,7 @@ doc.createElement = function(tag) {
 		},
 		setAttribute: function(name, value) {
 			count('setAttribute');
-			this[name] = value.toString();
+			this[(name == 'class'?'className':name)] = value.toString();
 			if (name == 'href') {
 				var url = Url.parse(value);
 				this.pathname = url.pathname;
@@ -60,7 +60,7 @@ doc.createElement = function(tag) {
 		setAttributeNS: function(namespace, name, value) {
 			count('setAttributeNS');
 			this.namespaceURI = namespace;
-			this[name] = value.toString();
+			this[(name == 'class'?'className':name)] = value.toString();
 		},
 		getAttribute: function(name, value) {
 			count('getAttribute');
