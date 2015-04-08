@@ -19,6 +19,12 @@
         "DOM emulator"
     ],
     "main": "fake-dom.js",
+    "directories": {
+        "lib": "./lib"
+    },
+    "dependencies": {
+        "xmldom": "^0.1.19"
+    },
     "engines": {
         "node": "*"
     },

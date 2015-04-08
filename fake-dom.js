@@ -1,5 +1,5 @@
 "use strict";
-var fs = require('fs'),
+var xmlhttprequest = require('./lib/XMLHttpRequest.js').XMLHttpRequest,
 	Url = require('url');
 
 var used = {};
@@ -273,30 +273,7 @@ window.requestAnimationFrame.$resolve = function() {
 	window.performance.$elapse(20);
 };
 window.location = {};
-window.XMLHttpRequest = new function() {
-	var request = function() {
-		this.open = function(method, url) {
-			this.method = method;
-			this.url = url;
-		};
-		this.send = function() {
-			var xhr = this;
-			var r = '';
-			xhr.readyState = 4;
-			xhr.status = 200;
-
-			request.$instances.push(this);
-			fs.createReadStream(this.url, {encoding:'utf8'}).on('data', function (chunk) {
-				r += chunk;
-			}).on('end', function () {
-				xhr.responseText = r;
-				xhr.onreadystatechange();
-			});
-		};
-	};
-	request.$instances = [];
-	return request;
-};
+window.XMLHttpRequest = xmlhttprequest;
 
 var getHTML = function (node) {
 	var prop, val,
